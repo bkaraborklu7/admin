@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yurt Yönetim Paneli - IoT & Güvenlikli</title>
+    <style>
+        /* ==================================================================
+           🎨 GENEL TASARIM VE SIDEBAR
+           ================================================================== */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            display: flex;
+        }
+
+        #sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #2c3e50;
+            color: white;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: none; /* Giriş yapana kadar gizli */
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 25px;
+            text-align: center;
+            background: #1a252f;
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .menu-item:hover { background: #34495e; border-left: 4px solid #3498db; }
+        .menu-item.active { background: #34495e; border-left: 4px solid #3498db; font-weight: bold; }
+
+        /* ==================================================================
+           📦 İÇERİK ALANI
+           ================================================================== */
+        .main-content {
+            flex: 1;
+            margin-left: 260px; /* Sidebar alanı */
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .view-section { display: none; animation: fadeIn 0.4s; }
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #f0f0f0; text-align: left; }
+        th { background-color: #343a40; color: white; }
+
+        /* ROZETLER */
+        .badge {
+            padding: 6px 12px; border-radius: 20px; color: white; font-weight: bold;
+            font-size: 0.85rem; display: inline-block; min-width: 80px; text-align: center;
+        }
+        .yurtta { background-color: #28a745; }
+        .disarida { background-color: #dc3545; }
+        .izinli { background-color: #007bff; }
+        .okulda { background-color: #f1c40f; color: #2c3e50; }
+
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-onay { background: #28a745; }
+        .btn-red { background: #dc3545; }
+
+        /* ==================================================================
+           🔐 LOGIN EKRANI
+           ================================================================== */
+        #adminLoginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f4f7f6; z-index: 10000; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .login-box {
+            background: white; padding: 40px; border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 350px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar">
+        <div class="sidebar-header">🏫 YURT PANELİ</div>
+        <div onclick="sekmeAc('dashboard')" id="m-dashboard" class="menu-item active">📊 Ana Kontrol Paneli</div>
+        <div onclick="sekmeAc('ogrenci-liste')" id="m-ogrenci-liste" class="menu-item">👥 Öğrenci Listesi</div>
+        <div onclick="sekmeAc('izinler')" id="m-izinler" class="menu-item">📝 İzin Talepleri <span id="talepSayisi"></span></div>
+        <div onclick="sekmeAc('etut')" id="m-etut" class="menu-item">📚 Etüt Yoklaması</div>
+        <div onclick="sekmeAc('belletmen')" id="m-belletmen" class="menu-item">👮 Nöbetçi Listesi</div>
+        <div onclick="sekmeAc('yemekhane')" id="m-yemekhane" class="menu-item">🍴 Yemekhane Takibi</div>
+        <div onclick="sekmeAc('kayit')" id="m-kayit" class="menu-item">🔐 Kayıt İzinleri</div>
+        <div onclick="sekmeAc('turnikeSim')" id="m-turnikeSim" class="menu-item" style="color: #f1c40f;">🚀 Turnike Simülatörü</div>
+        <div onclick="sekmeAc('adminAyarlarView')" id="m-adminAyarlarView" class="menu-item">⚙️ Ayarlar</div>
+        <div onclick="cikisYap()" class="menu-item" style="margin-top: auto; background: #c0392b;">🚪 Çıkış Yap</div>
+    </div>
+
+    <div class="main-content" id="mainWrapper" style="display:none;">
+        
+        <div id="dashboard" class="view-section active">
+            <div class="card">
+                <h2>🕒 Canlı Hareket Akışı</h2>
+                <div id="hareketListesi"></div>
+            </div>
+        </div>
+
+        <div id="ogrenci-liste" class="view-section">
+            <div class="card">
+                <h2>👥 Tüm Kayıtlı Kişiler</h2>
+                <table>
+                    <thead><tr><th>Ad Soyad / Kart ID</th><th>Kategori</th><th>Durum</th></tr></thead>
+                    <tbody id="ogrenciTablosu"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="izinler" class="view-section">
+            <div class="card">
+                <h2>⏳ Onay Bekleyen Talepler</h2>
+                <table>
+                    <thead><tr><th>Öğrenci</th><th>Tür</th><th>Tarih</th><th>Açıklama</th><th>İşlem</th></tr></thead>
+                    <tbody id="talepTablosu"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="yemekhane" class="view-section">
+            <div class="card">
+                <h2>🍴 Yemekhane Takibi <button class="btn btn-red" style="float:right" onclick="yemekhaneSifirla()">Listeyi Sıfırla</button></h2>
+                <table>
+                    <thead><tr><th>Tarih</th><th>Ad Soyad</th><th>Giriş Saati</th><th>Çıkış Saati</th></tr></thead>
+                    <tbody id="yemekhaneTabloGövdesi"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="kayit" class="view-section">
+            <div class="card">
+                <h2>🔐 Ön Kayıt Tanımlama</h2>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    <input type="text" id="yeniOgrenciNo" placeholder="No">
+                    <input type="text" id="yeniOgrenciAd" placeholder="Ad Soyad">
+                    <input type="text" id="yeniKartId" placeholder="Kart ID (UID)">
+                    <select id="yeniOgrenciTip">
+                        <option value="YURTÇU">Yurtçu</option>
+                        <option value="EVCİ">Evci</option>
+                        <option value="ÖĞRETMEN">Öğretmen</option>
+                    </select>
+                    <button class="btn btn-onay" onclick="izinliNumaraEkle()">+ Ekle</button>
+                </div>
+                <table id="izinliNumaralarTable">
+                    <thead><tr><th>No</th><th>Ad Soyad</th><th>Kart ID</th><th>İşlem</th></tr></thead>
+                    <tbody id="izinliNumaralarTablosu"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="turnikeSim" class="view-section">
+            <div class="card" style="border: 2px solid #f1c40f;">
+                <h2>🚀 Sanal Turnike Simülatörü</h2>
+                <input type="text" id="testKartId" placeholder="Kart ID Girin" style="padding:10px; width:200px;">
+                <select id="testKapiKodu" style="padding:10px;">
+                    <option value="ANA_GIRIS">🏢 Okul Kapısı</option>
+                    <option value="YURT_KAPI">🛌 Yurt Kapısı</option>
+                    <option value="YEMEKHANE_GIRIS">🍴 Yemekhane Giriş</option>
+                </select>
+                <button onclick="sanalKartOkut()" class="btn" style="background:#f1c40f; color:#000;">KART OKUT</button>
+                <div id="simulasyonSonuc" style="margin-top:15px; font-weight:bold;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminLoginScreen">
+        <div class="login-box">
+            <h2>Yönetim Paneli</h2>
+            <input type="text" id="adminUser" placeholder="Kullanıcı Adı" style="width:100%; padding:12px; margin-bottom:15px;"><br>
+            <input type="password" id="adminPass" placeholder="Şifre" style="width:100%; padding:12px; margin-bottom:15px;"><br>
+            <button onclick="adminGirisYap()" class="btn btn-onay" style="width:100%; padding:12px;">Giriş Yap</button>
+            <p id="loginHata" style="color:red; margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://residential-aila-okul-yurt-backend-ebf598e1.koyeb.app";
+
+        // GİRİŞ KONTROLÜ
+        async function adminGirisYap() {
+            const kullaniciAdi = document.getElementById('adminUser').value;
+            const sifre = document.getElementById('adminPass').value;
+            const res = await fetch(`${API_URL}/admin-login`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kullaniciAdi, sifre })
+            });
+            const data = await res.json();
+            if (data.basarili) {
+                document.getElementById('adminLoginScreen').style.display = 'none';
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('mainWrapper').style.display = 'block';
+                sessionStorage.setItem('adminAuth', 'true');
+                verileriYenile();
+            } else { document.getElementById('loginHata').innerText = "Hatalı Bilgi!"; }
+        }
+
+        function sekmeAc(id) {
+            document.querySelectorAll('.view-section').forEach(d => d.style.display = 'none');
+            document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).style.display = 'block';
+            document.getElementById('m-' + id).classList.add('active');
+            verileriYenile();
+        }
+
+        async function verileriYenile() {
+            try {
+                // Öğrenciler
+                const resOgr = await fetch(`${API_URL}/ogrenciler`);
+                const ogrenciler = await resOgr.json();
+                let htmlOgr = "";
+                ogrenciler.forEach(o => {
+                    const r = o.durum === "YURTTA" ? "yurtta" : (o.durum === "IZINLI" ? "izinli" : "disarida");
+                    htmlOgr += `<tr><td><b>${o.ad}</b><br><small>ID: ${o.kartId}</small></td><td>${o.tip}</td><td><span class="badge ${r}">${o.durum}</span></td></tr>`;
+                });
+                document.getElementById("ogrenciTablosu").innerHTML = htmlOgr;
+
+                // Hareketler
+                const resHar = await fetch(`${API_URL}/hareketler`);
+                const harks = await resHar.json();
+                let hH = "";
+                harks.slice(0, 10).forEach(h => {
+                    hH += `<div style="padding:10px; border-bottom:1px solid #eee;">🕒 ${h.zaman} - <b>${h.isim}</b>: ${h.mesaj}</div>`;
+                });
+                document.getElementById("hareketListesi").innerHTML = hH;
+
+                // Talepler
+                const resT = await fetch(`${API_URL}/izin-talepleri`);
+                const talepler = await resT.json();
+                document.getElementById("talepSayisi").innerText = `(${talepler.length})`;
+            } catch (e) { console.error(e); }
+        }
+
+        async function sanalKartOkut() {
+            const kartId = document.getElementById("testKartId").value;
+            const kapiKodu = document.getElementById("testKapiKodu").value;
+            const endpoint = kapiKodu.startsWith("YEMEKHANE") ? "/yemekhane-kart" : "/yoklama-kart";
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ kartId, kapiKodu })
+            });
+            const data = await res.json();
+            document.getElementById("simulasyonSonuc").innerText = data.mesaj;
+            verileriYenile();
+        }
+
+        function cikisYap() { sessionStorage.clear(); location.reload(); }
+        setInterval(verileriYenile, 5000);
+    </script>
+</body>
+</html>
